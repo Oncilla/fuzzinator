@@ -24,7 +24,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Unable to setup temp dir: %s", err)
 	}
-	if err := execute.SetupCorpus(tmpDir, commit); err != nil {
+	if err := execute.SetupCorpus(target.Corpus, tmpDir); err != nil {
 		log.Fatalf("Unable to setup corpus: %s", err)
 	}
 	bin, err := execute.BuildBinary(target, tmpDir)
