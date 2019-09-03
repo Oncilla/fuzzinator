@@ -1,0 +1,4 @@
+panic: noo
+github.com/Oncilla/fuzzinator/cmd/fuzz.Fuzz
+go-fuzz-dep.Main
+main.main
