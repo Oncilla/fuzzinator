@@ -22,11 +22,33 @@
 
 package conf
 
+import "golang.org/x/xerrors"
+
 // Conf configures the fuzzinator. It is designed to be compatible with
 // fuzzbuzz.io project yaml.
 type Conf struct {
 	// Targets contains all fuzzing targets.
-	Targets map[string]Target `yaml:"targets"`
+	Targets TargetMap `yaml:"targets"`
+}
+
+// TargetMap contains all targets and ensures no two targets can share the same
+// name.
+type TargetMap map[string]Target
+
+// UnmarshalYAML translates the targets list to a map
+func (m *TargetMap) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var list []Target
+	if err := unmarshal(&list); err != nil {
+		return xerrors.Errorf("unmarshalling list: %w", err)
+	}
+	*m = make(TargetMap)
+	for _, target := range list {
+		if _, ok := (*m)[target.Name]; ok {
+			return xerrors.Errorf("target already exists: %s", target.Name)
+		}
+		(*m)[target.Name] = target
+	}
+	return nil
 }
 
 // Target defines a single fuzzing target.
