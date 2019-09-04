@@ -67,10 +67,13 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&confFile, "conf", "c", "fuzzinator.yml",
 		"defines the config file path (default fuzzinator.yml)")
 	rootCmd.AddCommand(setupCmd)
+	rootCmd.AddCommand(fuzzCmd)
 }
 
 // Execute executes the comands.
 func Execute() {
+	rootCmd.SilenceErrors = true
+	rootCmd.SilenceUsage = true
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
