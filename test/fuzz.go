@@ -20,41 +20,24 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package conf_test
+package test
 
-import (
-	"io/ioutil"
-	"testing"
+import "encoding/json"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v2"
-
-	"github.com/oncilla/fuzzinator/conf"
-)
-
-func TestCompatible(t *testing.T) {
-	raw, err := ioutil.ReadFile("testdata/fuzzbuzz.yml")
-	require.NoError(t, err)
-	var cfg conf.Conf
-	err = yaml.Unmarshal(raw, &cfg)
-	require.NoError(t, err)
-	yamlTarget := conf.Target{
-		Name:   "FromYAML",
-		Corpus: "./corpus",
-		Harness: conf.Harness{
-			Function: "FromYAML",
-			Package:  "github.com/fuzzbuzz/tutorial",
-		},
+// Fuzz is a sample fuzzing entrypoint that trivially panics.
+func Fuzz(b []byte) int {
+	var a struct {
+		A int
+		B string
 	}
-	assert.Equal(t, yamlTarget, cfg.Targets[yamlTarget.Name])
-	jsonTarget := conf.Target{
-		Name:   "FromJSON",
-		Corpus: "./corpus",
-		Harness: conf.Harness{
-			Function: "FromJSON",
-			Package:  "github.com/fuzzbuzz/tutorial",
-		},
+	if err := json.Unmarshal(b, &a); err != nil {
+		return 0
 	}
-	assert.Equal(t, jsonTarget, cfg.Targets[jsonTarget.Name])
+	if a.A < 10 {
+		panic(a.A)
+	}
+	if len(a.B) > 10 {
+		panic(a.B)
+	}
+	return 1
 }

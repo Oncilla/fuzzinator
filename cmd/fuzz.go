@@ -20,41 +20,33 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package conf_test
+package cmd
 
 import (
-	"io/ioutil"
-	"testing"
+	"github.com/spf13/cobra"
+	"golang.org/x/xerrors"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v2"
-
-	"github.com/oncilla/fuzzinator/conf"
+	"github.com/oncilla/fuzzinator/lib"
 )
 
-func TestCompatible(t *testing.T) {
-	raw, err := ioutil.ReadFile("testdata/fuzzbuzz.yml")
-	require.NoError(t, err)
-	var cfg conf.Conf
-	err = yaml.Unmarshal(raw, &cfg)
-	require.NoError(t, err)
-	yamlTarget := conf.Target{
-		Name:   "FromYAML",
-		Corpus: "./corpus",
-		Harness: conf.Harness{
-			Function: "FromYAML",
-			Package:  "github.com/fuzzbuzz/tutorial",
-		},
+var fuzzCmd = &cobra.Command{
+	Use:   "fuzz",
+	Short: "fuzz the target without setting up the workdirectory",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		target, commit, err := targetAndCommit(confFile, args[0])
+		if err != nil {
+			return err
+		}
+		return fuzz(target.Name, commit, terminate)
+	},
+}
+
+func fuzz(targetName, commit string, stop <-chan struct{}) error {
+	workdir := lib.TempWorkdir(targetName, commit)
+	bin := lib.BinaryPath(workdir)
+	if err := lib.RunBinary(bin, workdir, stop); err != nil {
+		return xerrors.Errorf("error while fuzzing: %w", err)
 	}
-	assert.Equal(t, yamlTarget, cfg.Targets[yamlTarget.Name])
-	jsonTarget := conf.Target{
-		Name:   "FromJSON",
-		Corpus: "./corpus",
-		Harness: conf.Harness{
-			Function: "FromJSON",
-			Package:  "github.com/fuzzbuzz/tutorial",
-		},
-	}
-	assert.Equal(t, jsonTarget, cfg.Targets[jsonTarget.Name])
+	return nil
 }
