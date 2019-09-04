@@ -26,8 +26,8 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 
-	"github.com/Oncilla/fuzzinator/conf"
-	"github.com/Oncilla/fuzzinator/lib"
+	"github.com/oncilla/fuzzinator/conf"
+	"github.com/oncilla/fuzzinator/lib"
 )
 
 var setupCmd = &cobra.Command{

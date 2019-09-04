@@ -3,4 +3,4 @@ targets:
     corpus: ./test/corpus
     harness:
       function: Fuzz
-      package: github.com/Oncilla/fuzzinator/test
+      package: github.com/oncilla/fuzzinator/test

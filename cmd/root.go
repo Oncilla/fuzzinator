@@ -33,8 +33,8 @@ import (
 	"golang.org/x/xerrors"
 	"gopkg.in/yaml.v2"
 
-	"github.com/Oncilla/fuzzinator/conf"
-	"github.com/Oncilla/fuzzinator/lib"
+	"github.com/oncilla/fuzzinator/conf"
+	"github.com/oncilla/fuzzinator/lib"
 )
 
 var (

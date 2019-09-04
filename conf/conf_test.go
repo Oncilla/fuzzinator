@@ -30,7 +30,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
 
-	"github.com/Oncilla/fuzzinator/conf"
+	"github.com/oncilla/fuzzinator/conf"
 )
 
 func TestCompatible(t *testing.T) {

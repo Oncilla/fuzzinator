@@ -23,7 +23,7 @@
 package main
 
 import (
-	"github.com/Oncilla/fuzzinator/cmd"
+	"github.com/oncilla/fuzzinator/cmd"
 )
 
 func main() {

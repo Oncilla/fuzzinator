@@ -33,7 +33,7 @@ import (
 	"golang.org/x/xerrors"
 	"gopkg.in/src-d/go-git.v4"
 
-	"github.com/Oncilla/fuzzinator/conf"
+	"github.com/oncilla/fuzzinator/conf"
 )
 
 // SetupTempWorkdir sets up the temporary working directory and returns the path.
