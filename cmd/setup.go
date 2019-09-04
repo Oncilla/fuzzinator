@@ -23,6 +23,8 @@
 package cmd
 
 import (
+	"log"
+
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 
@@ -44,15 +46,18 @@ var setupCmd = &cobra.Command{
 }
 
 func setup(target conf.Target, commit string, stop <-chan struct{}) error {
-	tmpDir, err := lib.SetupTempWorkdir(target.Name, commit)
+	workdir, err := lib.SetupTempWorkdir(target.Name, commit)
+	log.Println("Setting up temporary workdir", workdir)
 	if err != nil {
-		xerrors.Errorf("unable to setup temp dir: %w", err)
+		return xerrors.Errorf("unable to setup temp dir: %w", err)
 	}
-	if err := lib.SetupCorpus(target.Corpus, tmpDir); err != nil {
-		xerrors.Errorf("unable to setup corpus: %w", err)
+	log.Println("Copying corpus to temporary workdir")
+	if err := lib.SetupCorpus(target.Corpus, workdir); err != nil {
+		return xerrors.Errorf("unable to setup corpus: %w", err)
 	}
-	if _, err := lib.BuildBinary(target, tmpDir, stop); err != nil {
-		xerrors.Errorf("unable to build fuzzing binary: %w", err)
+	log.Println("Building fuzzing binary", lib.BinaryPath(workdir))
+	if _, err := lib.BuildBinary(target, workdir, stop); err != nil {
+		return xerrors.Errorf("unable to build fuzzing binary: %w", err)
 	}
 	return nil
 }
