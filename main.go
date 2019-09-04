@@ -20,41 +20,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package conf_test
+package main
 
 import (
-	"io/ioutil"
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v2"
-
-	"github.com/Oncilla/fuzzinator/conf"
+	"github.com/Oncilla/fuzzinator/cmd"
 )
 
-func TestCompatible(t *testing.T) {
-	raw, err := ioutil.ReadFile("testdata/fuzzbuzz.yml")
-	require.NoError(t, err)
-	var cfg conf.Conf
-	err = yaml.Unmarshal(raw, &cfg)
-	require.NoError(t, err)
-	yamlTarget := conf.Target{
-		Name:   "FromYAML",
-		Corpus: "./corpus",
-		Harness: conf.Harness{
-			Function: "FromYAML",
-			Package:  "github.com/fuzzbuzz/tutorial",
-		},
-	}
-	assert.Equal(t, yamlTarget, cfg.Targets[yamlTarget.Name])
-	jsonTarget := conf.Target{
-		Name:   "FromJSON",
-		Corpus: "./corpus",
-		Harness: conf.Harness{
-			Function: "FromJSON",
-			Package:  "github.com/fuzzbuzz/tutorial",
-		},
-	}
-	assert.Equal(t, jsonTarget, cfg.Targets[jsonTarget.Name])
+func main() {
+	cmd.Execute()
 }

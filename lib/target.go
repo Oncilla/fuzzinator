@@ -20,13 +20,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package execute
+package lib
 
 import (
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"syscall"
 
 	"github.com/otiai10/copy"
 	"golang.org/x/xerrors"
@@ -35,54 +36,74 @@ import (
 	"github.com/Oncilla/fuzzinator/conf"
 )
 
-// 1. Setup corpus
-//  a. Create tmp dir with current commit + package as identifier
-//  b. Copy corpus to tmp dir
-// 2. Build binary
-// 3. Run binary
-// 4. Wait for SIGINT, commit crashers
-
-// commit, err := CommitHash()
-// if err != nil {
-// 	return xerrors.Errorf("unable to get commit hash: %w", err)
-// }
-
-// SetupTempDir sets up the temporary working directory and returns the path.
-func SetupTempDir(targetName, commit string) (string, error) {
-	tmpDir := TempCorpusName(targetName, commit)
-	if err := os.MkdirAll(tmpDir, 0755); err != nil {
+// SetupTempWorkdir sets up the temporary working directory and returns the path.
+func SetupTempWorkdir(targetName, commit string) (string, error) {
+	workdir := TempWorkdir(targetName, commit)
+	if err := os.MkdirAll(workdir, 0755); err != nil {
 		return "", xerrors.Errorf("unable to create temporary corpus: %w", err)
 	}
-	return tmpDir, nil
+	return workdir, nil
+}
+
+// TempWorkdir returns the temporary workdir path for a given target and commit.
+func TempWorkdir(targetName string, commit string) string {
+	return filepath.Join(os.TempDir(), "fuzzinator", fmt.Sprintf("%s_%s", targetName, commit))
 }
 
 // SetupCorpus sets up the temporary working directory with the configured corpus.
-func SetupCorpus(corpus, tmpDir string) error {
-	if err := copy.Copy(corpus, filepath.Join(tmpDir, "corpus")); err != nil {
+func SetupCorpus(corpus, workdir string) error {
+	if err := copy.Copy(corpus, filepath.Join(workdir, "corpus")); err != nil {
 		return xerrors.Errorf("unable to copy corpus: %w", err)
 	}
 	return nil
 }
 
 // BuildBinary builds the fuzzing binary and returns the path.
-func BuildBinary(target conf.Target, tmpDir string) (string, error) {
-	output := filepath.Join(tmpDir, "fuzz.zip")
+func BuildBinary(target conf.Target, workdir string, stop <-chan struct{}) (string, error) {
+	output := BinaryPath(workdir)
 	cmd := exec.Command("go-fuzz-build", "-o", output, "-tags", target.Harness.BuildTags,
 		"-func", target.Harness.Function, target.Harness.Package)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		return "", xerrors.Errorf("unable to build fuzzing binary: %x", err)
+	if err := cmd.Start(); err != nil {
+		return "", xerrors.Errorf("unable to start building fuzzing binary: %w", err)
 	}
-	return output, nil
+	done := make(chan error)
+	go func() {
+		done <- cmd.Wait()
+	}()
+	select {
+	case <-stop:
+		if err := cmd.Process.Signal(syscall.SIGTERM); err != nil {
+			return "", xerrors.Errorf("unable to terminate building fuzzing binary: %w", err)
+		}
+		return "", xerrors.Errorf("abort building due to SIGTERM")
+	case err := <-done:
+		if err != nil {
+			return "", xerrors.Errorf("error while bulding fuzzing binary: %w", err)
+		}
+		return output, nil
+	}
 }
 
-// go-fuzz -bin=./bin/lib_hpkt-fuzz.zip -workdir=workdir/lib_hpkt
-// go-fuzz-build -o bin/lib_hpkt-fuzz.zip ./lib_hpkt
+// BinaryPath returns the file path to the fuzzing binary based on the temporary directory.
+func BinaryPath(workdir string) string {
+	return filepath.Join(workdir, "fuzz.zip")
+}
 
-// TempCorpusName returns the temporary corpus name for a given target and commit.
-func TempCorpusName(target string, commit string) string {
-	return filepath.Join(os.TempDir(), "fuzzinator", fmt.Sprintf("%s_%s", target, commit))
+// RunBinary runs the fuzzing binary until the stop channel is closed.
+func RunBinary(fuzzBin string, workdir string, stop <-chan struct{}) error {
+	cmd := exec.Command("go-fuzz", "-bin", fuzzBin, "-workdir", workdir)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Start(); err != nil {
+		return xerrors.Errorf("unable to build fuzzing binary: %w", err)
+	}
+	<-stop
+	if err := cmd.Process.Signal(syscall.SIGTERM); err != nil {
+		return xerrors.Errorf("unable to terminate fuzzing: %w", err)
+	}
+	return nil
 }
 
 // CommitHash gets the commit hash of the local git repository.

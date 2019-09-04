@@ -1,0 +1,6 @@
+targets:
+  - name: Fuzz
+    corpus: ./test/corpus
+    harness:
+      function: Fuzz
+      package: github.com/Oncilla/fuzzinator/test
