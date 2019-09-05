@@ -1,6 +1,7 @@
 targets:
-  - name: Fuzz
+  - name: fuzz
     corpus: ./test/corpus
+    crashers: ./test/crashers
     harness:
       function: Fuzz
       package: github.com/oncilla/fuzzinator/test

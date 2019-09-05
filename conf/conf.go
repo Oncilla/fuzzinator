@@ -53,9 +53,10 @@ func (m *TargetMap) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 // Target defines a single fuzzing target.
 type Target struct {
-	Name    string  `yaml:"name"`
-	Corpus  string  `yaml:"corpus"`
-	Harness Harness `yaml:"harness"`
+	Name     string  `yaml:"name"`
+	Corpus   string  `yaml:"corpus"`
+	Crashers string  `yaml:"crashers"`
+	Harness  Harness `yaml:"harness"`
 }
 
 // Harness defines the fuzzing harness.

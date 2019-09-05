@@ -58,6 +58,14 @@ func SetupCorpus(corpus, workdir string) error {
 	return nil
 }
 
+// CopyCrashers copies the crashers from the workdir to the target directory.
+func CopyCrashers(workdir, target string) error {
+	if err := copy.Copy(filepath.Join(workdir, "crashers"), target); err != nil {
+		return xerrors.Errorf("unable to copy crashers: %w", err)
+	}
+	return nil
+}
+
 // BuildBinary builds the fuzzing binary and returns the path.
 func BuildBinary(target conf.Target, workdir string, stop <-chan struct{}) (string, error) {
 	output := BinaryPath(workdir)

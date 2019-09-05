@@ -68,6 +68,7 @@ func init() {
 		"defines the config file path (default fuzzinator.yml)")
 	rootCmd.AddCommand(setupCmd)
 	rootCmd.AddCommand(fuzzCmd)
+	rootCmd.AddCommand(crashersCmd)
 }
 
 // Execute executes the comands.
