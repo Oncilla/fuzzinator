@@ -97,7 +97,12 @@ func targetAndCommit(confFile, targetName string) (conf.Target, string, error) {
 		return conf.Target{}, "", xerrors.Errorf("target not in config file at %s: %w",
 			confFile, err)
 	}
-	commit, err := lib.CommitHash()
+	dir, err := lib.PkgDir(target.Harness.Package)
+	if err != nil {
+		return conf.Target{}, "", xerrors.Errorf("error resolving package %q: %w",
+			target.Harness.Package, err)
+	}
+	commit, err := lib.CommitHash(dir)
 	if err != nil {
 		return conf.Target{}, "", xerrors.Errorf("unable to get git commit id: %w", err)
 	}

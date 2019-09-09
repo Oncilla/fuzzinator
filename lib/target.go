@@ -27,9 +27,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"syscall"
 
 	"github.com/otiai10/copy"
+	"golang.org/x/tools/go/packages"
 	"golang.org/x/xerrors"
 	"gopkg.in/src-d/go-git.v4"
 
@@ -114,15 +116,75 @@ func RunBinary(fuzzBin string, workdir string, stop <-chan struct{}) error {
 	return nil
 }
 
-// CommitHash gets the commit hash of the local git repository.
-func CommitHash() (string, error) {
-	r, err := git.PlainOpen(".")
+// PkgDir returns the absolute path to a go package.
+func PkgDir(pkg string) (string, error) {
+	cfg := &packages.Config{
+		Mode: packages.NeedFiles,
+	}
+	respkgs, err := packages.Load(cfg, pkg)
 	if err != nil {
-		return "", xerrors.Errorf("unable to open git repository: %w", err)
+		return "", xerrors.Errorf("unable to resolve package: %w", err)
+	}
+	if len(respkgs) != 1 {
+		paths := make([]string, len(respkgs))
+		for i, p := range respkgs {
+			paths[i] = p.PkgPath
+		}
+		return "", xerrors.Errorf("cannot build multiple packages, but %q resolved to: %v",
+			pkg, strings.Join(paths, ", "))
+	}
+	info := respkgs[0]
+	if len(info.GoFiles) == 0 {
+		return "", xerrors.Errorf("no go file for %q", pkg)
+	}
+	return filepath.Dir(info.GoFiles[0]), nil
+}
+
+// CommitHash gets the commit hash of the local git repository.
+func CommitHash(dir string) (string, error) {
+	r, err := git.PlainOpenWithOptions(dir, &git.PlainOpenOptions{DetectDotGit: true})
+	if err != nil {
+		return "", xerrors.Errorf("unable to open git repository at %q: %w", dir, err)
 	}
 	ref, err := r.Head()
 	if err != nil {
 		return "", xerrors.Errorf("unable to determine head: %w", err)
 	}
 	return ref.Hash().String(), nil
+}
+
+// AddCrashers adds the crashers to the git repository.
+func AddCrashers(crashers, name, commit string) (bool, error) {
+	r, err := git.PlainOpenWithOptions(crashers, &git.PlainOpenOptions{DetectDotGit: true})
+	if err != nil {
+		return false, xerrors.Errorf("unable to open git repository at %q: %w", crashers, err)
+	}
+	w, err := r.Worktree()
+	if err != nil {
+		return false, xerrors.Errorf("unable to get worktree: %w", err)
+	}
+	s, err := w.Status()
+	if err != nil {
+		return false, xerrors.Errorf("cannot determine status: %w", err)
+	}
+	if err := isClean(s); err != nil {
+		return false, xerrors.Errorf("can only auto-commit on clean worktree: %s", err)
+	}
+	if _, err := w.Add(crashers); err != nil {
+		return false, xerrors.Errorf("unable to add files: %w", err)
+	}
+	// Dirty check whether files were added.
+	if s, err = w.Status(); err != nil || isClean(s) != nil {
+		return true, nil
+	}
+	return false, nil
+}
+
+func isClean(s git.Status) error {
+	for file, status := range s {
+		if status.Staging != git.Unmodified && status.Staging != git.Untracked {
+			return xerrors.Errorf("%c %s", status.Staging, file)
+		}
+	}
+	return nil
 }
